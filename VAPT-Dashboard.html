@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>VAPT Dashboard - EPL</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      /* Light Theme */
+      --bg-light: #f4f7f9;
+      --header-bg-light: rgba(255, 255, 255, 0.85);
+      --card-bg-light: #ffffff;
+      --text-light: #2c3e50;
+      --text-secondary-light: #7f8c8d;
+      --border-light: #e0e5ec;
+      --shadow-light: rgba(44,62,80,0.10);
+
+      /* Main Block Colors */
+      --vapt-color: #e74c3c;
+      --asm-color: #f39c12;
+      --bas-color: #f1c40f;
+      --red-color: #2ecc71;
+      --summary-color: #3498db;
+      --sidebar-vapt-light: #ffeaea;
+      --sidebar-asm-light: #fff5e5;
+      --sidebar-bas-light: #fffbe6;
+      --sidebar-red-light: #eafff0;
+      --sidebar-summary-light: #e6f2fc;
+
+      /* Dark Theme */
+      --bg-dark: #101418;
+      --header-bg-dark: rgba(16, 20, 24, 0.85);
+      --card-bg-dark: #161B22;
+      --text-dark: #EAEAEA;
+      --text-secondary-dark: #8b949e;
+      --border-dark: #30363d;
+      --shadow-dark: rgba(0,0,0,0.4);
+
+      --vapt-color-dark: #D73D4E;
+      --asm-color-dark: #E3A135;
+      --bas-color-dark: #D9C84A;
+      --red-color-dark: #34A853;
+      --summary-color-dark: #4287be;
+      --sidebar-vapt-dark: #3e2227;
+      --sidebar-asm-dark: #332714;
+      --sidebar-bas-dark: #312f22;
+      --sidebar-red-dark: #1f3627;
+      --sidebar-summary-dark: #232b38;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      margin: 0;
+      background: var(--bg-light);
+      color: var(--text-light);
+      transition: background 0.3s ease, color 0.3s ease;
+      /* Removed overflow hidden to allow whole page scrolling */
+    }
+    body.dark {
+      background: var(--bg-dark);
+      color: var(--text-dark);
+    }
+
+    header {
+      background: var(--header-bg-light);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      color: var(--text-light);
+      height: 100px;
+      display: flex;
+      align-items: center;
+      position: sticky; top: 0; z-index: 1000;
+      border-bottom: 1px solid var(--border-light);
+      box-shadow: 0 4px 12px var(--shadow-light);
+      padding: 0; text-align: center;
+      transition: all 0.3s ease;
+    }
+    body.dark header {
+      background: var(--header-bg-dark);
+      border-color: var(--border-dark);
+      color: var(--text-dark);
+    }
+    header h1 {
+      margin: 0 auto;
+      font-weight: 600;
+      font-size: 30px;
+      letter-spacing: 1px;
+      user-select: none;
+    }
+    header img {
+      height: 85px;
+      position: absolute;
+      top: 8px;
+      left: 20px;
+      cursor: pointer;
+      user-select: none;
+    }
+    body.dark header img { filter: brightness(0.9) grayscale(0.5); }
+    #themeToggleBtn {
+      position: absolute; top: 34px; right: 18px; cursor: pointer;
+      user-select: none; height: 32px; width: 32px; font-size: 20px;
+      line-height: 32px; text-align: center; border-radius: 50%;
+      background: #e0e5ec; color: #333; border: none; transition: all 0.3s ease;
+      display: flex; align-items: center; justify-content: center;
+    }
+    body.dark #themeToggleBtn { background: #30363d; color: #fff; }
+    #themeToggleBtn:hover { 
+      transform: scale(1.1) rotate(15deg);
+      background-color: #d1d6db;
+    }
+    body.dark #themeToggleBtn:hover { background-color: #424a57; }
+
+    .main-wrap { display: flex; height: calc(100vh - 67px); }
+    aside#sidebar {
+      border-right: 1px solid var(--border-light);
+      width: 240px; min-width: 240px;
+      display: none; flex-direction: column; padding-top: 20px;
+      transition: all 0.3s ease;
+      background: var(--card-bg-light);
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    body.dark aside#sidebar { border-color: var(--border-dark); background: var(--card-bg-dark); }
+    /* ---- Sidebar Colored Blocks ---- */
+    aside#sidebar .block.vapt    { background: var(--sidebar-vapt-light); }
+    aside#sidebar .block.asm     { background: var(--sidebar-asm-light); }
+    aside#sidebar .block.bas     { background: var(--sidebar-bas-light); }
+    aside#sidebar .block.red     { background: var(--sidebar-red-light); }
+    aside#sidebar .block.summary { background: var(--sidebar-summary-light);}
+    body.dark aside#sidebar .block.vapt    { background: var(--sidebar-vapt-dark); color: var(--vapt-color-dark);}
+    body.dark aside#sidebar .block.asm     { background: var(--sidebar-asm-dark); color: var(--asm-color-dark);}
+    body.dark aside#sidebar .block.bas     { background: var(--sidebar-bas-dark); color: var(--bas-color-dark);}
+    body.dark aside#sidebar .block.red     { background: var(--sidebar-red-dark); color: var(--red-color-dark);}
+    aside#sidebar .block {
+      font-weight: 600; font-size: 16px;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 24px; cursor: pointer; transition: background 0.2s, color 0.2s;
+      margin-bottom: 3px; border-radius: 10px 24px 24px 10px;
+      border: none;
+      user-select: none;
+    }
+    aside#sidebar .block:focus {
+      outline: 3px solid var(--summary-color);
+      outline-offset: 2px;
+    }
+    aside#sidebar .block:hover { box-shadow: 0 2px 12px 0 rgba(0,0,0,0.10);}
+    aside#sidebar .arrow { font-size: 16px; transition: transform 0.25s; }
+    aside#sidebar .subblock { display: none; margin: 0 0 10px 0; }
+    aside#sidebar .subblock > div {
+      font-weight: 500; color: var(--text-light);
+      background: none; cursor: pointer; padding: 9px 12px 9px 28px;
+      margin-bottom: 1.5px;
+      transition: background 0.22s, color 0.22s; border-left: 3px solid transparent;
+      border-radius: 6px;
+      user-select: none;
+    }
+    aside#sidebar .subblock > div:focus {
+      outline: 3px solid var(--summary-color);
+      outline-offset: 2px;
+    }
+    aside#sidebar .subblock > div:hover { background: rgba(0,0,0,0.03); }
+    aside#sidebar .subblock > div.active {
+      border-left-color: var(--accent-color); color: var(--accent-color); font-weight: 600;
+    }
+    body.dark aside#sidebar .subblock > div { color: var(--text-dark); }
+
+    section#mainArea { 
+      flex: 1; position: relative; padding: 25px;
+      display: flex; flex-direction: column; height: 100%; 
+      overflow-y: auto;
+    }
+
+    #backBtn {
+      background: var(--card-bg-light); color: var(--text-light); border: 1px solid var(--border-light);
+      padding: 8px 20px; font-weight: 600; border-radius: 8px; font-size: 16px;
+      cursor: pointer; display: none; z-index: 90; transition: all 0.3s ease;
+      position: absolute; top: 20px; left: 25px;
+      user-select: none;
+    }
+    #backBtn:hover { background: var(--summary-color); color: white; border-color: var(--summary-color); }
+    body.dark #backBtn {
+      background: transparent; color: var(--text-dark); border: 1px solid var(--border-dark);
+    }
+
+    /* ---- Custom Dashboard Grid ---- */
+    .dashboard-flex-col {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      overflow-y: auto;
+      padding-bottom: 20px;
+    }
+    .dashboard-row {
+      display: flex;
+      flex-direction: row;
+      justify-content: center;
+      width: 100%;
+      gap: 32px;
+      flex-wrap: wrap;
+    }
+    .box {
+      border: 1px solid var(--border-light);
+      box-shadow: 0 8px 25px var(--shadow-light);
+      border-radius: 16px; display: flex; align-items: center; justify-content: center;
+      min-width: 240px; min-height: 160px; font-size: 24px; font-weight: 700; color: #fff;
+      cursor: pointer; transition: transform .2s, box-shadow .2s; text-align: center; padding: 10px 35px;
+      animation: fadeInSlideUp 0.5s ease-out forwards;
+      opacity: 0;
+      user-select: none;
+    }
+    .box.summary {
+      background-color: var(--summary-color);
+      min-width: 350px;
+      margin-bottom: 44px;
+      font-size: 27px;
+      font-weight: 800;
+      color: #fff;
+      box-shadow: 0 12px 30px var(--shadow-light);
+      border-radius: 26px 26px 20px 20px;
+      border-width: 2px;
+    }
+    .box.vapt { background-color: var(--vapt-color);}
+    .box.asm { background-color: var(--asm-color);}
+    .box.bas { background-color: var(--bas-color);}
+    .box.red { background-color: var(--red-color);}
+    body.dark .box.vapt     { background-color: var(--vapt-color-dark);}
+    body.dark .box.asm      { background-color: var(--asm-color-dark);}
+    body.dark .box.bas      { background-color: var(--bas-color-dark);}
+    body.dark .box.red      { background-color: var(--red-color-dark);}
+    body.dark .box.summary  { background-color: var(--summary-color-dark);}
+    body.dark .box { border-color: var(--border-dark); box-shadow: 0 8px 25px var(--shadow-dark);}
+    .box:hover { transform: translateY(-5px); box-shadow: 0 12px 30px var(--shadow-light);}
+    body.dark .box:hover { box-shadow: 0 0 20px rgba(255,255,255,0.11); }
+
+    @keyframes fadeInSlideUp {
+      from { opacity: 0; transform: translateY(20px);}
+      to { opacity: 1; transform: translateY(0);}
+    }
+    .box:nth-child(1) { animation-delay: 0.1s;}
+    .box:nth-child(2) { animation-delay: 0.2s;}
+    .box:nth-child(3) { animation-delay: 0.3s;}
+    .box:nth-child(4) { animation-delay: 0.4s;}
+    .box.summary { animation-delay: 0.1s; }
+
+    .content-wrapper { display: none; flex-direction: column; height: 100%; }
+    .chart-container {
+      background: var(--card-bg-light); color: var(--text-light);
+      border: 1px solid var(--border-light); border-radius: 12px;
+      padding: 20px; transition: box-shadow 0.3s ease; position: relative;
+      display: flex; flex-direction: column;
+      min-height: 250px;
+    }
+    body.dark .chart-container {
+      background: var(--card-bg-dark); color: var(--text-dark); border-color: var(--border-dark);
+    }
+    body.dark .chart-container:hover { box-shadow: 0 0 20px rgba(255,255,255,0.05); }
+    .chart-title { text-align: center; font-size: 1.1em; font-weight: 600; margin: 0 0 15px 0; color: var(--text-secondary-light); }
+    body.dark .chart-title { color: var(--text-secondary-dark);}
+    .chart-canvas-container { flex-grow: 1; position: relative;}
+
+    .summary-grid, .detail-grid { display: grid; gap: 25px; margin-bottom: 25px;}
+    .summary-grid { grid-template-columns: 1fr 1fr; flex-shrink: 0;}
+    .detail-grid { grid-template-columns: repeat(3, 1fr); flex-shrink: 0;}
+
+    /* Added: Stabilize bar charts in VAPT, ASM, BAS, Red Teaming detailed views */
+    #sectionContent .summary-grid > .chart-container {
+      min-height: 280px;
+    }
+
+    .donut-chart-container { position: relative;}
+    .donut-center-text {
+      position: absolute; top: 55%; left: 50%;
+      transform: translate(-50%, -50%); text-align: center;
+      pointer-events: none;
+    }
+    .donut-center-text .percent { font-size: 2.2em; font-weight: 700; color: var(--text-light);}
+    body.dark .donut-center-text .percent { color: var(--text-dark);}
+    .donut-center-text .label { font-size: 0.9em; color: #888;}
+
+    .table-wrapper {
+      flex-grow: 1;
+      /* Removed overflow-y: auto to allow page scroll */
+      margin-top: 10px;
+    }
+    .data-table {
+      width: 100%; border-collapse: collapse; border-radius: 12px;
+      overflow: hidden; background: var(--card-bg-light); border: 1px solid var(--border-light);
+    }
+    .data-table th {
+      background-color: var(--summary-color);
+      color: #fff; font-weight: 600; font-size: 16px; padding: 12px 14px; text-align: left;
+      position: sticky; top: 0; z-index: 10;
+    }
+    .data-table tr td { padding: 12px 14px; font-size: 15px; border-bottom: 1px solid var(--border-light); transition: background 0.2s ease;}
+    .data-table tbody tr:hover { background: rgba(0,0,0,0.03);}
+    body.dark .data-table { background: var(--card-bg-dark); border-color: var(--border-dark);}
+    body.dark .data-table tr td { border-color: var(--border-dark);}
+    body.dark .data-table tbody tr:hover { background: rgba(255,255,255,0.05);}
+
+    hr.section-divider { border: 0; height: 1px; background: var(--border-light); margin: 25px 0;}
+    body.dark hr.section-divider { background: var(--border-dark);}
+
+    @media (max-width: 1020px) {
+      .dashboard-row { flex-direction: column; gap: 22px;}
+      .dashboard-flex-col { align-items: center;}
+    }
+    @media (max-width: 900px) {
+      .summary-grid, .detail-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body class="dark" lang="en">
+<header role="banner">
+  <img id="logo" src="EPL-logo.jpg" alt="EPL Company Logo" role="img" tabindex="0" />
+  <h1 id="headerTitle">VAPT Dashboard - EPL</h1>
+  <button id="themeToggleBtn" aria-label="Toggle light/dark theme" title="Toggle light/dark theme" aria-pressed="true">☾</button>
+</header>
+<div class="main-wrap">
+  <aside id="sidebar" role="navigation" aria-label="Dashboard menu" tabindex="0"></aside>
+  <section id="mainArea" role="main" aria-live="polite" aria-atomic="true">
+    <button id="backBtn" onclick="goHome()" aria-label="Back to Home">← Back</button>
+    <div id="dashboardFlex" class="dashboard-flex-col"></div>
+    <div id="summaryView" class="content-wrapper"></div>
+    <div id="sectionContent" class="content-wrapper"></div>
+  </section>
+</div>
+<script>
+  // --- DATA SOURCE ---
+  const dashboardData = {
+    vapt: {
+      title: "Vulnerability Assessment & Penetration Testing",
+      coverageBreakdown: {
+        web: { title: "Web Apps", total: 31, covered: 12 },
+        srv: { title: "Servers", total: 342, covered: 295 },
+        dev: { title: "Network Devices", total: 179, covered: 157 },
+      },
+      assetBreakdown: {},
+      vulnerabilities: { critical: 5, high: 15, medium: 25, low: 40 },
+      remediation: {
+        critical: { remediated: 2 }, high: { remediated: 10 },
+        medium: { remediated: 20 }, low: { remediated: 35 },
+      }
+    },
+    asm: {
+      title: "Attack Surface Management",
+      assetBreakdown: { domains: 50, subdomains: 250, ips: 300 },
+      vulnerabilities: { critical: 2, high: 8, medium: 12, low: 20 },
+      remediation: {
+        critical: { remediated: 1 }, high: { remediated: 5 },
+        medium: { remediated: 10 }, low: { remediated: 18 },
+      }
+    },
+    bas: {
+      title: "Breach & Attack Simulation",
+      assetBreakdown: {},
+      vulnerabilities: { critical: 1, high: 3, medium: 5, low: 8 },
+      remediation: {
+        critical: { remediated: 1 }, high: { remediated: 2 },
+        medium: { remediated: 5 }, low: { remediated: 8 },
+      }
+    },
+    red: {
+      title: "Red Teaming",
+      assetBreakdown: {},
+      vulnerabilities: { critical: 8, high: 12, medium: 10, low: 5 },
+      remediation: {
+        critical: { remediated: 2 }, high: { remediated: 5 },
+        medium: { remediated: 8 }, low: { remediated: 5 },
+      }
+    }
+  };
+
+  const themeToggleBtn = document.getElementById('themeToggleBtn');
+  let activeCharts = [];
+  let currentView = { name: 'home' };
+
+  function destroyActiveCharts() {
+    activeCharts.forEach(chart => chart.destroy());
+    activeCharts = [];
+  }
+
+  themeToggleBtn.addEventListener('click', () => {
+    const isDarkOn = document.body.classList.toggle('dark');
+    themeToggleBtn.innerHTML = isDarkOn ? '☾' : '☀';
+    themeToggleBtn.setAttribute('aria-pressed', isDarkOn);
+    if (currentView.name === 'summary') showSummary();
+    if (currentView.name === 'detail' && currentView.section) {
+      if (currentView.view === 'dashboard') renderDetailedView(currentView.section);
+    }
+  });
+
+  // Make logo clickable to open landing (home) page
+  const logo = document.getElementById('logo');
+  logo.addEventListener('click', goHome);
+  logo.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      goHome();
+    }
+  });
+
+  // --- Home Grid Layout ---
+  function renderHomeDashboard() {
+    const container = document.getElementById('dashboardFlex');
+    container.innerHTML = `
+      <div class="box summary" role="button" tabindex="0" aria-label="View Overall Summary" onclick="showSummary()" onkeydown="if(event.key==='Enter' || event.key===' ') {event.preventDefault(); showSummary();}">Overall Summary</div>
+      <div class="dashboard-row">
+        <div class="box vapt" role="button" tabindex="0" aria-label="View VAPT Dashboard" onclick="renderDetailedView('vapt')" onkeydown="if(event.key==='Enter' || event.key===' ') {event.preventDefault(); renderDetailedView('vapt');}">VAPT</div>
+        <div class="box asm" role="button" tabindex="0" aria-label="View ASM Dashboard" onclick="renderDetailedView('asm')" onkeydown="if(event.key==='Enter' || event.key===' ') {event.preventDefault(); renderDetailedView('asm');}">ASM</div>
+        <div class="box bas" role="button" tabindex="0" aria-label="View BAS Dashboard" onclick="renderDetailedView('bas')" onkeydown="if(event.key==='Enter' || event.key===' ') {event.preventDefault(); renderDetailedView('bas');}">BAS</div>
+        <div class="box red" role="button" tabindex="0" aria-label="View Red Teaming Dashboard" onclick="renderDetailedView('red')" onkeydown="if(event.key==='Enter' || event.key===' ') {event.preventDefault(); renderDetailedView('red');}">Red Teaming</div>
+      </div>
+    `;
+  }
+
+  function updateUI(view, sectionKey) {
+    document.getElementById('dashboardFlex').style.display = view === 'home' ? 'flex' : 'none';
+    document.getElementById('summaryView').style.display = view === 'summary' ? 'flex' : 'none';
+    document.getElementById('sectionContent').style.display = (view === 'detail' || view === 'reports') ? 'flex' : 'none';
+    document.getElementById('backBtn').style.display = view === 'home' ? 'none' : 'block';
+    document.getElementById('sidebar').style.display = (view === 'detail' || view === 'reports') ? 'flex' : 'none';
+
+    const isDark = document.body.classList.contains('dark');
+    const accentVar = view === 'summary' ? '--summary-color' : `--${sectionKey}-color`;
+    document.body.style.setProperty('--accent-color', `var(${accentVar}${isDark ? '-dark' : ''})`);
+  }
+
+  function populateSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    sidebar.innerHTML = `
+      <div class="block vapt" tabindex="0" role="button" aria-expanded="false" aria-controls="subblock_vapt"
+        onclick="sidebarAccordion('vapt')" onkeydown="if(event.key==='Enter' || event.key===' ') {event.preventDefault(); sidebarAccordion('vapt');}">
+        VAPT<span class="arrow" id="arrow_vapt">▶</span></div>
+      <div class="subblock" id="subblock_vapt" role="region" aria-label="VAPT Submenu">
+        <div data-section="vapt" data-view="dashboard" tabindex="0" role="button"
+          onclick="renderDetailedView('vapt')" onkeydown="if(event.key==='Enter' || event.key===' ') {event.preventDefault(); renderDetailedView('vapt');}">
+          Dashboard</div>
+        <div data-section="vapt" data-view="reports" tabindex="0" role="button"
+          onclick="loadReports('vapt')" onkeydown="if(event.key==='Enter' || event.key===' ') {event.preventDefault(); loadReports('vapt');}">
+          Reports</div>
+      </div>
+
+      <div class="block asm" tabindex="0" role="button" aria-expanded="false" aria-controls="subblock_asm"
+        onclick="sidebarAccordion('asm')" onkeydown="if(event.key==='Enter' || event.key===' ') {event.preventDefault(); sidebarAccordion('asm');}">
+        ASM<span class="arrow" id="arrow_asm">▶</span></div>
+      <div class="subblock" id="subblock_asm" role="region" aria-label="ASM Submenu">
+        <div data-section="asm" data-view="dashboard" tabindex="0" role="button"
+          onclick="renderDetailedView('asm')" onkeydown="if(event.key==='Enter' || event.key===' ') {event.preventDefault(); renderDetailedView('asm');}">
+          Dashboard</div>
+        <div data-section="asm" data-view="reports" tabindex="0" role="button"
+          onclick="loadReports('asm')" onkeydown="if(event.key==='Enter' || event.key===' ') {event.preventDefault(); loadReports('asm');}">
+          Reports</div>
+      </div>
+      
+      <div class="block bas" tabindex="0" role="button" aria-expanded="false" aria-controls="subblock_bas"
+        onclick="sidebarAccordion('bas')" onkeydown="if(event.key==='Enter' || event.key===' ') {event.preventDefault(); sidebarAccordion('bas');}">
+        BAS<span class="arrow" id="arrow_bas">▶</span></div>
+      <div class="subblock" id="subblock_bas" role="region" aria-label="BAS Submenu">
+        <div data-section="bas" data-view="dashboard" tabindex="0" role="button"
+          onclick="renderDetailedView('bas')" onkeydown="if(event.key==='Enter' || event.key===' ') {event.preventDefault(); renderDetailedView('bas');}">
+          Dashboard</div>
+        <div data-section="bas" data-view="reports" tabindex="0" role="button"
+          onclick="loadReports('bas')" onkeydown="if(event.key==='Enter' || event.key===' ') {event.preventDefault(); loadReports('bas');}">
+          Reports</div>
+      </div>
+
+      <div class="block red" tabindex="0" role="button" aria-expanded="false" aria-controls="subblock_red"
+        onclick="sidebarAccordion('red')" onkeydown="if(event.key==='Enter' || event.key===' ') {event.preventDefault(); sidebarAccordion('red');}">
+        Red Teaming<span class="arrow" id="arrow_red">▶</span></div>
+      <div class="subblock" id="subblock_red" role="region" aria-label="Red Teaming Submenu">
+        <div data-section="red" data-view="dashboard" tabindex="0" role="button"
+          onclick="renderDetailedView('red')" onkeydown="if(event.key==='Enter' || event.key===' ') {event.preventDefault(); renderDetailedView('red');}">
+          Dashboard</div>
+        <div data-section="red" data-view="reports" tabindex="0" role="button"
+          onclick="loadReports('red')" onkeydown="if(event.key==='Enter' || event.key===' ') {event.preventDefault(); loadReports('red');}">
+          Reports</div>
+      </div>
+    `;
+  }
+
+  function sidebarAccordion(sectionKey) {
+    document.querySelectorAll('#sidebar .subblock').forEach(sub => {
+      const currentKey = sub.id.split('_')[1];
+      const arrow = document.getElementById(`arrow_${currentKey}`);
+      if (currentKey !== sectionKey) {
+        sub.style.display = 'none';
+        arrow.style.transform = 'rotate(0deg)';
+        document.querySelector(`.block.${currentKey}`).setAttribute('aria-expanded', 'false');
+      }
+    });
+    const target = document.getElementById(`subblock_${sectionKey}`);
+    const arrow = document.getElementById(`arrow_${sectionKey}`);
+    const block = document.querySelector(`.block.${sectionKey}`);
+    const isVisible = target.style.display === 'block';
+    target.style.display = isVisible ? 'none' : 'block';
+    arrow.style.transform = isVisible ? 'rotate(0deg)' : 'rotate(90deg)';
+    block.setAttribute('aria-expanded', isVisible ? 'false' : 'true');
+  }
+
+  function goHome() {
+    currentView = { name: 'home' };
+    updateUI('home');
+    document.getElementById('headerTitle').textContent = 'VAPT Dashboard - EPL';
+    renderHomeDashboard();
+    document.querySelectorAll('#sidebar .subblock').forEach(sub => { sub.style.display = 'none'; });
+    document.querySelectorAll('#sidebar .arrow').forEach(arrow => { arrow.style.transform = 'rotate(0deg)'; });
+    document.querySelectorAll('#sidebar .block').forEach(block => block.setAttribute('aria-expanded', 'false'));
+    setActiveSidebar(null, null);
+  }
+
+  function setActiveSidebar(section, view) {
+    document.querySelectorAll('#sidebar .subblock > div').forEach(el => {
+      el.classList.toggle('active', el.dataset.section === section && el.dataset.view === view);
+    });
+  }
+
+  // ---- Summary ----
+  function showSummary() {
+    destroyActiveCharts();
+    currentView = { name: 'summary' };
+    updateUI('summary', 'summary');
+    document.getElementById('headerTitle').textContent = 'Overall Summary';
+
+    const summaryView = document.getElementById('summaryView');
+    summaryView.innerHTML = '';
+
+    const totals = Object.values(dashboardData).reduce((acc, section) => {
+      if(section.coverageBreakdown){
+        const sectionTotals = Object.values(section.coverageBreakdown).reduce((sAcc, sItem) => ({total: sAcc.total + sItem.total, covered: sAcc.covered + sItem.covered}), {total: 0, covered: 0});
+        acc.scope.total += sectionTotals.total;
+        acc.scope.covered += sectionTotals.covered;
+      }
+      for (const [severity, count] of Object.entries(section.vulnerabilities)) {
+        acc.remediation[severity].total += count;
+        acc.remediation[severity].remediated += section.remediation[severity].remediated;
+      }
+      return acc;
+    }, { scope: { total: 0, covered: 0 }, remediation: { critical: {total:0, remediated:0}, high: {total:0, remediated:0}, medium: {total:0, remediated:0}, low: {total:0, remediated:0} }});
+
+    document.getElementById('summaryView').innerHTML = `
+      <div class="summary-grid">
+        <div class="chart-container donut-chart-container" role="img" aria-label="Overall Scope and Coverage donut chart"><h3 class="chart-title">Overall Scope & Coverage</h3><div class="chart-canvas-container"><canvas id="summaryScopeChart" aria-hidden="true"></canvas></div><div class="donut-center-text"><div id="donutPercent" class="percent"></div><div class="label">Complete</div></div></div>
+        <div class="chart-container" role="img" aria-label="Overall Remediation status bar chart"><h3 class="chart-title">Overall Remediation Status</h3><div class="chart-canvas-container"><canvas id="summaryRemediationChart" aria-hidden="true"></canvas></div></div>
+      </div>
+      <div class="table-wrapper" tabindex="0" aria-label="Overall summary data table"><table class="data-table" role="grid"><thead><tr role="row"><th scope="col">Category</th><th scope="col">Total</th><th scope="col">Complete</th><th scope="col">Outstanding</th><th scope="col">Completion</th></tr></thead><tbody>
+          <tr role="row"><td>Project Scope</td><td>${totals.scope.total}</td><td>${totals.scope.covered}</td><td>${totals.scope.total - totals.scope.covered}</td><td>${((totals.scope.covered / totals.scope.total) * 100).toFixed(1)}%</td></tr>
+          ${Object.entries(totals.remediation).map(([severity, data]) => `<tr role="row"><td>${severity.charAt(0).toUpperCase() + severity.slice(1)} Vulns</td><td>${data.total}</td><td>${data.remediated}</td><td>${data.total - data.remediated}</td><td>${((data.remediated / data.total) * 100 || 0).toFixed(1)}%</td></tr>`).join('')}
+      </tbody></table></div>`;
+
+    const isDark = document.body.classList.contains('dark');
+    const accentColor = getComputedStyle(document.body).getPropertyValue('--accent-color').trim();
+    const remainingColor = isDark ? '#444' : '#e0e5ec';
+
+    document.getElementById('donutPercent').textContent = `${((totals.scope.covered / totals.scope.total) * 100).toFixed(1)}%`;
+
+    activeCharts.push(new Chart(document.getElementById('summaryScopeChart'), {
+      type: 'doughnut', data: { labels: ['Covered', 'Remaining'], datasets: [{ data: [totals.scope.covered, totals.scope.total - totals.scope.covered], backgroundColor: [accentColor, remainingColor], borderColor: isDark ? 'var(--card-bg-dark)' : 'var(--card-bg-light)', borderWidth: 4 }] },
+      options: { cutout: '70%', maintainAspectRatio: false, plugins: { legend: { display: false } } }
+    }));
+    activeCharts.push(new Chart(document.getElementById('summaryRemediationChart'), {
+      type: 'bar', data: { labels: ['Critical', 'High', 'Medium', 'Low'], datasets: [ { label: 'Remediated', data: Object.values(totals.remediation).map(s => s.remediated), backgroundColor: accentColor }, { label: 'Outstanding', data: Object.values(totals.remediation).map(s => s.total - s.remediated), backgroundColor: remainingColor } ] },
+      options: { maintainAspectRatio: false, scales: { x: { stacked: true, ticks:{color: isDark ?'#888':'#555'} }, y: { stacked: true, ticks:{color: isDark ?'#888':'#555'} } }, plugins: { legend: { position: 'bottom', labels: { color: isDark ? '#ddd' : '#333' } } } }
+    }));
+  }
+
+  function renderDetailedView(sectionKey) {
+    destroyActiveCharts();
+    currentView = { name: 'detail', section: sectionKey, view: 'dashboard' };
+    updateUI('detail', sectionKey);
+    sidebarAccordion(sectionKey);
+    setActiveSidebar(sectionKey, 'dashboard');
+
+    const data = dashboardData[sectionKey];
+    document.getElementById('headerTitle').textContent = data.title;
+    
+    let coverageHtml = '';
+    if (data.coverageBreakdown) {
+      coverageHtml = `<h2 class="chart-title">EPL Tracker Summary</h2><div class="detail-grid">${Object.entries(data.coverageBreakdown).map(([key, value]) => `<div class="chart-container" role="img" aria-label="${value.title} doughnut chart"><h3 class="chart-title">${value.title}</h3><div class="chart-canvas-container"><canvas id="${sectionKey}_${key}_chart" aria-hidden="true"></canvas></div></div>`).join('')}</div><hr class="section-divider">`;
+    }
+    document.getElementById('sectionContent').innerHTML = `
+      ${coverageHtml}
+      <div class="summary-grid" role="region" aria-label="Vulnerabilities and Remediation charts">
+        <div class="chart-container" role="img" aria-label="Vulnerabilities by severity bar chart"><h3 class="chart-title">Vulnerabilities by Severity</h3><div class="chart-canvas-container"><canvas id="detailVulnChart" aria-hidden="true"></canvas></div></div>
+        <div class="chart-container" role="img" aria-label="Remediation status bar chart"><h3 class="chart-title">Remediation Status</h3><div class="chart-canvas-container"><canvas id="detailRemediationChart" aria-hidden="true"></canvas></div></div>
+      </div>
+      <div class="table-wrapper" tabindex="0" aria-label="Detailed vulnerabilities remediation table"><table class="data-table" role="grid"><thead><tr role="row"><th scope="col">Vulnerability Level</th><th scope="col">Total Found</th><th scope="col">Remediated</th><th scope="col">Outstanding</th></tr></thead><tbody>
+        ${Object.entries(data.vulnerabilities).map(([severity, count]) => `<tr role="row"><td>${severity.charAt(0).toUpperCase() + severity.slice(1)}</td><td>${count}</td><td>${data.remediation[severity].remediated}</td><td>${count - data.remediation[severity].remediated}</td></tr>`).join('')}
+      </tbody></table></div>`;
+
+    const isDark = document.body.classList.contains('dark');
+    const accentColor = getComputedStyle(document.body).getPropertyValue('--accent-color').trim();
+    const remainingColor = isDark ? '#444' : '#e0e5ec';
+
+    if (data.coverageBreakdown) {
+      Object.entries(data.coverageBreakdown).forEach(([key, value]) => {
+        activeCharts.push(new Chart(document.getElementById(`${sectionKey}_${key}_chart`), {
+          type: 'doughnut',
+          data: {
+            labels: ['Covered', 'Remaining'],
+            datasets: [{
+              data: [value.covered, value.total - value.covered],
+              backgroundColor: [accentColor, remainingColor],
+              borderColor: isDark ? 'var(--card-bg-dark)' : 'var(--card-bg-light)',
+              borderWidth: 4
+            }]
+          },
+          options: {
+            maintainAspectRatio: false,
+            cutout: '60%',
+            plugins: {
+              legend: { display: true, position: 'bottom', labels: { color: isDark ? '#ddd' : '#333' } }
+            }
+          }
+        }));
+      });
+    }
+    activeCharts.push(new Chart(document.getElementById('detailVulnChart'), {
+      type: 'bar',
+      data: {
+        labels: ['Critical', 'High', 'Medium', 'Low'],
+        datasets: [{
+          label: 'Vulnerabilities Found',
+          data: Object.values(data.vulnerabilities),
+          backgroundColor: [
+            `var(--vapt-color${isDark ? '-dark' : ''})`,
+            `var(--asm-color${isDark ? '-dark' : ''})`,
+            `var(--bas-color${isDark ? '-dark' : ''})`,
+            `var(--red-color${isDark ? '-dark' : ''})`
+          ]
+        }]
+      },
+      options: {
+        maintainAspectRatio: false,
+        indexAxis: 'y',
+        scales: {
+          x: { ticks: { color: isDark ? '#888' : '#555' } },
+          y: { ticks: { color: isDark ? '#888' : '#555' } }
+        },
+        plugins: { legend: { display: false } }
+      }
+    }));
+    activeCharts.push(new Chart(document.getElementById('detailRemediationChart'), {
+      type: 'bar',
+      data: {
+        labels: ['Critical', 'High', 'Medium', 'Low'],
+        datasets: [
+          {
+            label: 'Remediated',
+            data: Object.values(data.remediation).map(s => s.remediated),
+            backgroundColor: accentColor
+          },
+          {
+            label: 'Outstanding',
+            data: Object.values(data.vulnerabilities).map((count, i) => count - Object.values(data.remediation)[i].remediated),
+            backgroundColor: remainingColor
+          }
+        ]
+      },
+      options: {
+        maintainAspectRatio: false,
+        scales: {
+          x: { stacked: true, ticks: { color: isDark ? '#888' : '#555' } },
+          y: { stacked: true, ticks: { color: isDark ? '#888' : '#555' } }
+        },
+        plugins: {
+          legend: { position: 'bottom', labels: { color: isDark ? '#ddd' : '#333' } }
+        }
+      }
+    }));
+  }
+
+// function loadReports(sectionKey) {
+//   destroyActiveCharts();
+//   currentView = { name: 'detail', section: sectionKey, view: 'reports' };
+//   updateUI('detail', sectionKey);
+//   sidebarAccordion(sectionKey);
+//   setActiveSidebar(sectionKey, 'reports');
+
+//   let reportLinks = '';
+//   if (sectionKey === 'vapt') {
+//     reportLinks = `
+//       <ul style="list-style: none; padding: 0; text-align: center; font-size: 1.2em;" role="list">
+//         <li style="margin: 15px 0;"><a href="VAPT_Report_Q3_2025.pdf" role="link" tabindex="0">VAPT Report Q3 2025 (PDF)</a></li>
+//         <li style="margin: 15px 0;"><a href="VAPT_Remedation_Q3_2025.pdf" role="link" tabindex="0">VAPT Remediation Q3 2025 (PDF)</a></li>
+//         <li style="margin: 15px 0;"><a href="VAPT_Report_Q2_2025.pdf" role="link" tabindex="0">VAPT Report Q2 2025 (PDF)</a></li>
+//         <li style="margin: 15px 0;"><a href="VAPT_Remedation_Q2_2025.pdf" role="link" tabindex="0">VAPT Remediation Q2 2025 (PDF)</a></li>
+//         <li style="margin: 15px 0;"><a href="VAPT_Findings_Q2_2025.xlsx" role="link" tabindex="0">VAPT Findings Q2 2025 (XLSX)</a></li>
+//       </ul>`;
+//   } else if (sectionKey === 'asm') {
+//     reportLinks = `
+//       <ul style="list-style: none; padding: 0; text-align: center; font-size: 1.2em;" role="list">
+//         <li style="margin: 15px 0;"><a href="7-14-25.pdf" role="link" tabindex="0">ASM Report Q3 2025 (PDF)</a></li>
+//         <li style="margin: 15px 0;"><a href="7-21-25.pdf" role="link" tabindex="0">ASM Remediation Q3 2025 (PDF)</a></li>
+//         <li style="margin: 15px 0;"><a href="7-28-25.pdf" role="link" tabindex="0">ASM Report Q2 2025 (PDF)</a></li>
+//         <li style="margin: 15px 0;"><a href="8-4-25.pdf" role="link" tabindex="0">ASM Remediation Q2 2025 (PDF)</a></li>
+//         <li style="margin: 15px 0;"><a href="8-11-25.PDF" role="link" tabindex="0">ASM Findings Q2 2025 (PDF)</a></li>
+//         <li style="margin: 15px 0;"><a href="8-18-25.pdf" role="link" tabindex="0">ASM Report Q3 2025 (PDF)</a></li>
+//         <li style="margin: 15px 0;"><a href="8-25-25.pdf" role="link" tabindex="0">ASM Remediation Q3 2025 (PDF)</a></li>
+//         <li style="margin: 15px 0;"><a href="9-1-25.pdf" role="link" tabindex="0">ASM Report Q2 2025 (PDF)</a></li>
+//         <li style="margin: 15px 0;"><a href="9-15-25.pdf" role="link" tabindex="0">ASM Remediation Q2 2025 (PDF)</a></li>
+//         <li style="margin: 15px 0;"><a href="9-29-25.PDF" role="link" tabindex="0">ASM Findings Q2 2025 (PDF)</a></li>
+//       </ul>`;
+//   } else if (sectionKey === 'bas') {
+//     reportLinks = `
+//       <ul style="list-style: none; padding: 0; text-align: center; font-size: 1.2em;" role="list">
+//         <li style="margin: 15px 0;"><a href="BAS_Report_Q3_2025.pdf" role="link" tabindex="0">BAS Report Q3 2025 (PDF)</a></li>
+//         <li style="margin: 15px 0;"><a href="BAS_Remedation_Q3_2025.pdf" role="link" tabindex="0">BAS Remediation Q3 2025 (PDF)</a></li>
+//         <li style="margin: 15px 0;"><a href="BAS_Report_Q2_2025.pdf" role="link" tabindex="0">BAS Report Q2 2025 (PDF)</a></li>
+//         <li style="margin: 15px 0;"><a href="BAS_Remedation_Q2_2025.pdf" role="link" tabindex="0">BAS Remediation Q2 2025 (PDF)</a></li>
+//         <li style="margin: 15px 0;"><a href="BAS_Findings_Q2_2025.xlsx" role="link" tabindex="0">BAS Findings Q2 2025 (XLSX)</a></li>
+//       </ul>`;
+//   } else if (sectionKey === 'red') {
+//     reportLinks = `
+//       <ul style="list-style: none; padding: 0; text-align: center; font-size: 1.2em;" role="list">
+//         <li style="margin: 15px 0;"><a href="Red_Report_Q3_2025.pdf" role="link" tabindex="0">Red Teaming Report Q3 2025 (PDF)</a></li>
+//         <li style="margin: 15px 0;"><a href="Red_Remedation_Q3_2025.pdf" role="link" tabindex="0">Red Teaming Remediation Q3 2025 (PDF)</a></li>
+//         <li style="margin: 15px 0;"><a href="Red_Report_Q2_2025.pdf" role="link" tabindex="0">Red Teaming Report Q2 2025 (PDF)</a></li>
+//         <li style="margin: 15px 0;"><a href="Red_Remedation_Q2_2025.pdf" role="link" tabindex="0">Red Teaming Remediation Q2 2025 (PDF)</a></li>
+//         <li style="margin: 15px 0;"><a href="Red_Findings_Q2_2025.xlsx" role="link" tabindex="0">Red Teaming Findings Q2 2025 (XLSX)</a></li>
+//       </ul>`;
+//   }
+
+//   document.getElementById('sectionContent').innerHTML = `
+//     <div class="chart-container fadein" style="margin: auto; max-width: 800px;">
+//       <h2 class="chart-title">Downloadable Reports</h2>
+//       ${reportLinks}
+//     </div>`;
+// }
+
+function loadReports(sectionKey) {
+  destroyActiveCharts();
+  currentView = { name: 'detail', section: sectionKey, view: 'reports' };
+  updateUI('detail', sectionKey);
+  sidebarAccordion(sectionKey);
+  setActiveSidebar(sectionKey, 'reports');
+
+  let reportLinks = '';
+  if (sectionKey === 'asm') {
+    reportLinks = `
+      <ul style="list-style: none; padding: 0; text-align: center; font-size: 1.2em;" role="list">
+        <li style="margin: 15px 0;">
+          <a href="ASM/7-14-25.pdf" target="_blank" role="link" tabindex="0">ASM Report 7-14-25 (PDF)</a>
+        </li>
+        <li style="margin: 15px 0;">
+          <a href="ASM/7-21-25.pdf" target="_blank" role="link" tabindex="0">ASM Report 7-21-25 (PDF)</a>
+        </li>
+        <li style="margin: 15px 0;">
+          <a href="ASM/7-28-25.pdf" target="_blank" role="link" tabindex="0">ASM Report 7-28-25 (PDF)</a>
+        </li>
+        <li style="margin: 15px 0;">
+          <a href="ASM/8-4-25.pdf" target="_blank" role="link" tabindex="0">ASM Report 8-4-25 (PDF)</a>
+        </li>
+        <li style="margin: 15px 0;">
+          <a href="ASM/8-11-25.pdf" target="_blank" role="link" tabindex="0">ASM Report 8-11-25 (PDF)</a>
+        </li>
+        <li style="margin: 15px 0;">
+          <a href="ASM/8-18-25.pdf" target="_blank" role="link" tabindex="0">ASM Report 8-18-25 (PDF)</a>
+        </li>
+        <li style="margin: 15px 0;">
+          <a href="ASM/8-25-25.pdf" target="_blank" role="link" tabindex="0">ASM Report 8-25-25 (PDF)</a>
+        </li>
+        <li style="margin: 15px 0;">
+          <a href="ASM/9-1-25.pdf" target="_blank" role="link" tabindex="0">ASM Report 9-1-25 (PDF)</a>
+        </li>
+        <li style="margin: 15px 0;">
+          <a href="ASM/9-8-25.pdf" target="_blank" role="link" tabindex="0">ASM Report 9-8-25 (PDF)</a>
+        </li>
+        <li style="margin: 15px 0;">
+          <a href="ASM/9-15-25.pdf" target="_blank" role="link" tabindex="0">ASM Report 9-15-25 (PDF)</a>
+        </li>
+        <li style="margin: 15px 0;">
+          <a href="ASM/9-29-25.pdf" target="_blank" role="link" tabindex="0">ASM Report 9-29-25 (PDF)</a>
+        </li>
+      </ul>`;
+  } else if (sectionKey === 'bas') {
+    reportLinks = `
+      <ul style="list-style: none; padding: 0; text-align: center; font-size: 1.2em;" role="list">
+        <li style="margin: 15px 0;">
+          <a href="BAS/EPL BAS.pdf" target="_blank" role="link" tabindex="0">BAS Report (PDF)</a>
+        </li>
+      </ul>`;
+  } else if (sectionKey === 'red') {
+    reportLinks = `
+      <ul style="list-style: none; padding: 0; text-align: center; font-size: 1.2em;" role="list">
+        <li style="margin: 15px 0;">
+          <a href="#" role="link" tabindex="0">Red Teaming Report (PDF) - Placeholder</a>
+        </li>
+      </ul>`;
+  } else if (sectionKey === 'vapt') {
+    // If you want to add VAPT docs later, do here or leave empty
+    reportLinks = `<p style="text-align:center;">No documents available for VAPT yet.</p>`;
+  }
+
+  document.getElementById('sectionContent').innerHTML = `
+    <div class="chart-container fadein" style="margin: auto; max-width: 800px;">
+      <h2 class="chart-title">Downloadable Reports</h2>
+      ${reportLinks}
+    </div>`;
+}
+
+
+
+  // Initial load
+  populateSidebar();
+  goHome();
+</script>
+</body>
+</html>

@@ -1,0 +1,24 @@
+# Node dependencies (if any node modules used)
+node_modules/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Ignore IDE specific files
+.vscode/
+.idea/
+
+# Ignore build output directories (if any build process added later)
+dist/
+build/
+
+# Ignore environment files
+.env
+
+# Ignore compiled files or caches
+*.class
+*.pyc
