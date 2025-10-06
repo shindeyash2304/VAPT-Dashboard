@@ -329,49 +329,146 @@
 </div>
 <script>
   // --- DATA SOURCE ---
-  const dashboardData = {
-    vapt: {
-      title: "Vulnerability Assessment & Penetration Testing",
-      coverageBreakdown: {
-        web: { title: "Web Apps", total: 31, covered: 12 },
-        srv: { title: "Servers", total: 342, covered: 295 },
-        dev: { title: "Network Devices", total: 179, covered: 157 },
+const dashboardData = {
+  vapt: {
+    title: "Vulnerability Assessment & Penetration Testing",
+    coverageBreakdown: {
+      web: {
+        title: "Web Apps",
+        total: 31, // as per Excel and PPT
+        covered: 14, // 14 initial reports submitted; 2 under review; 2 in progress; 4 left to be tested
+        details: {
+          submitted: 14,
+          underReview: 2,
+          inProgress: 2,
+          toBeTested: 4
+        }
       },
-      assetBreakdown: {},
-      vulnerabilities: { critical: 5, high: 15, medium: 25, low: 40 },
-      remediation: {
-        critical: { remediated: 2 }, high: { remediated: 10 },
-        medium: { remediated: 20 }, low: { remediated: 35 },
+      srv: {
+        title: "Servers",
+        total: 342, // Scope Count 300, Received 342 as per Excel/PPT
+        covered: 295, // Completed VA; PT: 89 completed
+        completedPT: 89
+      },
+      dev: {
+        title: "Network Devices",
+        total: 179, // Scope count 200, Received 179 as per Excel/PPT
+        covered: 157, // Completed VA; PT: 148 completed
+        completedPT: 148
       }
     },
-    asm: {
-      title: "Attack Surface Management",
-      assetBreakdown: { domains: 50, subdomains: 250, ips: 300 },
-      vulnerabilities: { critical: 2, high: 8, medium: 12, low: 20 },
-      remediation: {
-        critical: { remediated: 1 }, high: { remediated: 5 },
-        medium: { remediated: 10 }, low: { remediated: 18 },
-      }
+    assetBreakdown: {},
+    vulnerabilities: {
+      // No actual Excel/PPT updates for these counts, so base values unless otherwise provided
+      critical: 5,
+      high: 15,
+      medium: 25,
+      low: 40
     },
-    bas: {
-      title: "Breach & Attack Simulation",
-      assetBreakdown: {},
-      vulnerabilities: { critical: 1, high: 3, medium: 5, low: 8 },
-      remediation: {
-        critical: { remediated: 1 }, high: { remediated: 2 },
-        medium: { remediated: 5 }, low: { remediated: 8 },
-      }
+    remediation: {
+      critical: { remediated: 2 },
+      high: { remediated: 10 },
+      medium: { remediated: 20 },
+      low: { remediated: 35 }
     },
-    red: {
-      title: "Red Teaming",
-      assetBreakdown: {},
-      vulnerabilities: { critical: 8, high: 12, medium: 10, low: 5 },
-      remediation: {
-        critical: { remediated: 2 }, high: { remediated: 5 },
-        medium: { remediated: 8 }, low: { remediated: 5 },
+    issues: [
+      { 
+        desc: "Internal Network Device IPs Accessibility",
+        detail: "19 IPs not accessible from VAPT-TEMP, 23 IPs not accessible from both VAPT-TEMP and VAPT2. Suspected down. Awaiting confirmation from EPL Team."
+      },
+      { 
+        desc: "Internal Server IPs Accessibility",
+        detail: "49 IPs not accessible from both VAPT-TEMP and VAPT2. Suspected down. Awaiting confirmation from EPL Team."
       }
+    ],
+    remarks: [
+      "Switch IPs Batch 2 reporting to be completed; dependent on IP accessibility.",
+      "14 web app reports submitted. 4 internal web apps and associated reports pending."
+    ]
+  },
+  asm: {
+    title: "Attack Surface Management",
+    assetBreakdown: {
+      domains: 50, // Not specifically updated in files, maintaining previous unless otherwise provided
+      subdomains: 250,
+      ips: 300
+    },
+    vulnerabilities: {
+      // From Excel - Tracker: Port Vuln: 358, Web Vuln: 8, IP Vuln: 303. For dashboard, stick to previous or update if needed.
+      critical: 2,
+      high: 8,
+      medium: 12,
+      low: 20
+    },
+    remediation: {
+      critical: { remediated: 1 },
+      high: { remediated: 5 },
+      medium: { remediated: 10 },
+      low: { remediated: 18 }
+    },
+    status: [
+      "Monthly and weekly automated asset/vulnerability reports enabled and delivered.",
+      "Real-time alerting active for critical vulnerabilities and exposures.",
+      "Awaiting update from EPL team on the closure of identified vulnerabilities."
+    ]
+  },
+  bas: {
+    title: "Breach & Attack Simulation",
+    assetBreakdown: {
+      agentsInstalled: 11,
+      criticalSystems: 10,
+    },
+    vulnerabilities: {
+      critical: 1,
+      high: 3,
+      medium: 5,
+      low: 8
+    },
+    remediation: {
+      critical: { remediated: 1 },
+      high: { remediated: 2 },
+      medium: { remediated: 5 },
+      low: { remediated: 8 }
+    },
+    plan: [
+      "Only 1 agent currently has admin privileges; playbook execution blocked by NT Authority issue.",
+      "Awaiting additional agent installations with admin access from EPL team.",
+      "Pending: Executive summary and recommendations from latest activity."
+    ]
+  },
+  red: {
+    title: "Red Teaming",
+    assetBreakdown: {},
+    vulnerabilities: {
+      critical: 8,
+      high: 12,
+      medium: 10,
+      low: 5
+    },
+    remediation: {
+      critical: { remediated: 2 },
+      high: { remediated: 5 },
+      medium: { remediated: 8 },
+      low: { remediated: 5 }
     }
-  };
+  }
+};
+
+/* 
+Additional Status & Roadblocks (from Excel/PPT):
+- Certain web apps and Power BI dashboards are explicitly out-of-scope due to third-party hosting or duplicate URLs.
+- Monitoring of all provided assets commenced; awaiting public IP confirmations.
+- Accessibility issues persist for select internal servers and network device IPs.
+- Ongoing and completed actions by responsible teams are tracked in the original Excel tracker.
+*/
+
+/* 
+How to use:
+- Display .issues and .remarks fields where status or blockers are to be shown.
+- Use 'details', 'completedPT', and similar fields for fine-grained status in UI widgets.
+- Retain initial vulnerability/remediation counts unless detailed updates are available from external trackers.
+*/
+
 
   const themeToggleBtn = document.getElementById('themeToggleBtn');
   let activeCharts = [];
